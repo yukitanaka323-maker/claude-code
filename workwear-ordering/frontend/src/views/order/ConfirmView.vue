@@ -3,19 +3,17 @@
     <AppHeader />
     <div class="page-content">
       <StepIndicator :current="5" :steps="STEPS" />
-      <div class="step-header">
-        <h1>注文内容を確認してください</h1>
-      </div>
+      <div class="step-header"><h1>注文内容を確認してください</h1></div>
 
       <div class="card confirm-card">
         <table class="confirm-table">
           <tbody>
-            <tr><th>氏名</th><td>{{ auth.employee.value?.employeeName }}</td></tr>
-            <tr><th>部署</th><td>{{ auth.employee.value?.department }}</td></tr>
-            <tr><th>カテゴリ</th><td>{{ order.draft.category }}</td></tr>
-            <tr><th>商品名</th><td>{{ order.draft.productName }}</td></tr>
-            <tr><th>サイズ</th><td>{{ order.draft.size }}</td></tr>
-            <tr><th>数量</th><td>{{ order.draft.quantity }} 点</td></tr>
+            <tr><th>氏名</th><td>{{ store.employee?.name }}</td></tr>
+            <tr><th>部署</th><td>{{ store.employee?.department }}</td></tr>
+            <tr><th>カテゴリ</th><td>{{ store.draft.category }}</td></tr>
+            <tr><th>商品名</th><td>{{ store.draft.productName }}</td></tr>
+            <tr><th>サイズ</th><td>{{ store.draft.size }}</td></tr>
+            <tr><th>数量</th><td>{{ store.draft.quantity }} 点</td></tr>
           </tbody>
         </table>
       </div>
@@ -37,13 +35,12 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '@/components/common/AppHeader.vue';
 import StepIndicator from '@/components/common/StepIndicator.vue';
-import { useAuthStore } from '@/stores/authStore';
 import { useOrderStore } from '@/stores/orderStore';
+import { submitOrder } from '@/services/webhook';
 import { STEPS } from './steps';
 
 const router = useRouter();
-const auth = useAuthStore();
-const order = useOrderStore();
+const store = useOrderStore();
 const submitting = ref(false);
 const error = ref('');
 
@@ -51,7 +48,13 @@ async function submit() {
   submitting.value = true;
   error.value = '';
   try {
-    await order.submitOrder();
+    await submitOrder({
+      employee:    store.employee,
+      category:    store.draft.category,
+      productName: store.draft.productName,
+      size:        store.draft.size,
+      quantity:    store.draft.quantity,
+    });
     router.push('/order/complete');
   } catch (err) {
     error.value = typeof err === 'string' ? err : '注文の送信に失敗しました';
@@ -65,23 +68,14 @@ async function submit() {
 .confirm-card { margin-bottom: 24px; }
 .confirm-table { width: 100%; border-collapse: collapse; }
 .confirm-table th {
-  text-align: left;
-  padding: 14px 16px;
-  width: 120px;
-  font-size: 16px;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border);
-  background: #f9fafb;
+  text-align: left; padding: 14px 16px; width: 100px;
+  font-size: 16px; color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border); background: #f9fafb;
 }
 .confirm-table td {
-  padding: 14px 16px;
-  font-size: var(--font-lg);
-  font-weight: 600;
+  padding: 14px 16px; font-size: var(--font-lg); font-weight: 600;
   border-bottom: 1px solid var(--color-border);
 }
-.nav-buttons {
-  display: flex;
-  gap: 16px;
-}
+.nav-buttons { display: flex; gap: 16px; }
 .confirm-btn { flex: 1; background: var(--color-success); }
 </style>

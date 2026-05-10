@@ -5,8 +5,13 @@
       <h1>社員証をかざしてください</h1>
       <p class="scan-sub">カードリーダーに社員証をタッチしてください</p>
 
-      <div v-if="loading" class="scan-loading">認証中...</div>
       <div v-if="error" class="error-msg">{{ error }}</div>
+
+      <!-- 見つかった場合：名前を確認して進む -->
+      <div v-if="found" class="found-card">
+        <p class="found-name">{{ found.name }}（{{ found.department }}）</p>
+        <button class="btn-primary proceed-btn" @click="proceed">注文へ進む →</button>
+      </div>
     </div>
   </div>
 </template>
@@ -14,35 +19,38 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
+import { useOrderStore } from '@/stores/orderStore';
 import { useCardReader } from '@/composables/useCardReader';
-import { useProductStore } from '@/stores/productStore';
+import { useAutoLogout } from '@/composables/useAutoLogout';
+import employees from '@/config/employees';
 
 const router = useRouter();
-const auth = useAuthStore();
-const products = useProductStore();
-const loading = ref(false);
+const store = useOrderStore();
 const error = ref('');
+const found = ref(null);
 
-// ログイン済みなら即リダイレクト
-onMounted(() => {
-  auth.logout();
-});
+onMounted(() => store.reset());
 
-useCardReader(async (authNumber) => {
-  if (loading.value) return;
-  loading.value = true;
+useCardReader((authNumber) => {
   error.value = '';
-  try {
-    const employee = await auth.scanCard(authNumber);
-    await products.fetchProducts();
-    router.push(employee.isAdmin ? '/admin/orders' : '/order/category');
-  } catch (err) {
-    error.value = typeof err === 'string' ? err : '認証に失敗しました';
-  } finally {
-    loading.value = false;
+  found.value = null;
+  const emp = employees.find((e) => e.authNumber === authNumber);
+  if (!emp) {
+    error.value = '社員が見つかりません（認証番号: ' + authNumber + '）';
+    return;
   }
+  found.value = emp;
 });
+
+useAutoLogout(() => {
+  found.value = null;
+  error.value = '';
+});
+
+function proceed() {
+  store.setEmployee(found.value);
+  router.push('/order/category');
+}
 </script>
 
 <style scoped>
@@ -71,20 +79,15 @@ useCardReader(async (authNumber) => {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
 }
-h1 {
-  font-size: var(--font-xl);
-  color: var(--color-text);
-  margin-bottom: 12px;
+h1 { font-size: var(--font-xl); color: var(--color-text); margin-bottom: 12px; }
+.scan-sub { color: var(--color-text-muted); font-size: 16px; margin-bottom: 24px; }
+.found-card {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f0fdf4;
+  border-radius: var(--radius);
+  border: 2px solid var(--color-success);
 }
-.scan-sub {
-  color: var(--color-text-muted);
-  font-size: 16px;
-  margin-bottom: 24px;
-}
-.scan-loading {
-  color: var(--color-primary);
-  font-size: var(--font-lg);
-  font-weight: bold;
-  padding: 16px;
-}
+.found-name { font-size: var(--font-lg); font-weight: bold; margin-bottom: 16px; }
+.proceed-btn { width: 100%; }
 </style>

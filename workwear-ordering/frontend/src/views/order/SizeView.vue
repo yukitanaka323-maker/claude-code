@@ -5,7 +5,7 @@
       <StepIndicator :current="3" :steps="STEPS" />
       <div class="step-header">
         <h1>サイズを選択してください</h1>
-        <p>{{ order.draft.productName }}</p>
+        <p>{{ store.draft.productName }}</p>
       </div>
       <div v-if="!currentProduct" class="error-msg">商品が選択されていません</div>
       <div v-else class="grid-3">
@@ -13,15 +13,13 @@
           v-for="size in currentProduct.sizes"
           :key="size"
           class="size-btn"
-          :class="{ selected: order.draft.size === size }"
+          :class="{ selected: store.draft.size === size }"
           @click="select(size)"
         >
           {{ size }}
         </button>
       </div>
-      <div class="nav-back">
-        <button class="btn-ghost" @click="router.back()">← 戻る</button>
-      </div>
+      <div class="nav-back"><button class="btn-ghost" @click="router.back()">← 戻る</button></div>
     </div>
   </div>
 </template>
@@ -31,21 +29,20 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '@/components/common/AppHeader.vue';
 import StepIndicator from '@/components/common/StepIndicator.vue';
-import { useProductStore } from '@/stores/productStore';
 import { useOrderStore } from '@/stores/orderStore';
+import products from '@/config/products';
 import { STEPS } from './steps';
 
 const router = useRouter();
-const products = useProductStore();
-const order = useOrderStore();
+const store = useOrderStore();
 
 const currentProduct = computed(() => {
-  const cat = products.categories.find((c) => c.categoryName === order.draft.category);
-  return cat?.products.find((p) => p.id === order.draft.productId) || null;
+  const cat = products.find((c) => c.categoryName === store.draft.category);
+  return cat?.products.find((p) => p.id === store.draft.productId) || null;
 });
 
 function select(size) {
-  order.setDraftField('size', size);
+  store.setDraftField('size', size);
   router.push('/order/quantity');
 }
 </script>
@@ -61,10 +58,6 @@ function select(size) {
   border: 3px solid transparent;
 }
 .size-btn:hover { border-color: var(--color-primary); }
-.size-btn.selected {
-  border-color: var(--color-primary);
-  background: #eff6ff;
-  color: var(--color-primary);
-}
+.size-btn.selected { border-color: var(--color-primary); background: #eff6ff; color: var(--color-primary); }
 .nav-back { margin-top: 24px; }
 </style>
